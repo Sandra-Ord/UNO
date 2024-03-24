@@ -1,0 +1,58 @@
+@page
+@using Domain
+@using Helpers
+@model WebApp.Pages_Games.IndexModel
+
+@{
+    ViewData["Title"] = "Games";
+}
+
+<h1>Games of UNO</h1>
+
+<p>
+    <a asp-page="Create">Start a new game</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Games[0].CreatedAt)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Games[0].UpdatedAt)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Games[0].Players)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var game in Model.Games)
+{
+    <tr>
+    @{
+        var state = System.Text.Json.JsonSerializer.Deserialize<GameState>(game.State, JsonHelpers.JsonSerializerOptions);
+    }
+            <td>
+                @Html.DisplayFor(modelItem => game.CreatedAt)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => game.UpdatedAt)
+            </td>
+            <td>
+                <u>Player count: @state!.Players!.Count</u><br>
+                @foreach (var player in state.Players.OrderBy(p => p.NickName))
+                {
+                    var playerLabel = player.NickName + " (" + player.PlayerType + ")";
+                    <a asp-page="/Play/Index" asp-route-GameId="@state.Id" asp-route-PlayerId="@player.Id">@playerLabel</a>
+                }
+            </td>
+            <td>
+                <a asp-page="./Details" asp-route-id="@state.Id">Details</a> |
+                <a asp-page="./Delete" asp-route-id="@state.Id">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

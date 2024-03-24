@@ -1,0 +1,235 @@
+﻿@page
+@using Domain
+@model Index
+
+@{
+    ViewData["Title"] = "Current Game";
+}
+
+<h1>Current game of UNO</h1>
+
+@* -----------------------------------------  G  A  M  E    T  A  B  L  E  ----------------------------------------- *@
+<table class="table game-table" border="1px solid lightgray" id="game-table">
+
+    <tr style="border: white">
+        <td>
+        
+            @* -------------------------------------  G  A  M  E    I  N  F  O ------------------------------------- *@
+            @{
+                var yourTurn = Model.Engine.GetActivePlayer().Id == Model.PlayerId;
+                <div style="padding-bottom: 5px">
+                    @if (!yourTurn && !Model.Engine.GameFinished())
+                    {
+                        <b>Reload page in <span id="reload-label">-</span></b>
+                    }
+                    &nbsp;</div>
+            }
+            <div style="padding-bottom: 5px">
+                <b>Playing direction:</b> @(!Model.Engine.State.Reverse ? "Clockwise" : "Counter-clockwise")
+            </div>
+            <div style="padding-bottom: 5px">
+                @(Model.Engine.State.DeckReplaced ? "Deck has been replaced (no automatic card drawing after move)" : "")&nbsp
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            @* ---------------------------------------  P  L  A  Y  E  R  S  --------------------------------------- *@
+            <table class="table" border="1px solid lightgray">
+                <tr>
+                    <td>
+                        <b>Players in the game:</b>
+                    </td>
+                    <td>
+                        <b>Players hand:</b>
+                    </td>
+                </tr>
+
+                @for (var i = 0; i < Model.Engine.State.Players.Count; i++)
+                {
+                    var player = Model.Engine.State.Players[i];
+                    var isActivePlayer = Model.Engine.GetActivePlayer().Id == player.Id;
+                    var isPlayerPage = player.Id == Model.PlayerId;
+                    var text = $"(Nr. {i + 1}) {player.NickName} {(isActivePlayer || isPlayerPage ? "←" : "")} {(isActivePlayer ? "[active]" : "")} {(isPlayerPage ? "[you]" : "")}";
+                    <tr>
+                        <td style="font-weight: @(isActivePlayer ? "bold" : "normal")">
+                            @text
+                        </td>
+                        <td>
+                            @player.PlayerHand.Count card(s)
+                        </td>
+                    </tr>
+                }
+            </table>
+        </td>
+        
+        @* --------------------------------  C  A  R  D  S    O  N    T  A  B  L  E  ------------------------------- *@
+        <td>
+            <div class="table-deck">
+            @if (Model.Engine.State.LastPlayedCard!.CardSuit != ECardSuit.Wild)
+            {
+                <div></div>
+            }
+
+                <div align="center" style="padding-left: 50px; width: 210px" class="card">
+                    <div style="border-bottom: 2px solid black; padding-bottom: 5px;">Discarded cards: @Model.Engine.State.DiscardedCards.Count</div>
+                    <img style="padding-top: 10px;" src="@Model.Engine.State.LastPlayedCard!.GetCardPicturePath()" alt="Last played card: @Model.Engine.State.LastPlayedCard.CardSuit @Model.Engine.State.LastPlayedCard.CardValue"/>
+                </div>
+
+            @if (Model.Engine.State.LastPlayedCard.CardSuit == ECardSuit.Wild)
+            {
+                <div align="center" style="padding-left: 50px; width: 210px" class="card">
+                    <div style="border-bottom: 2px solid black; padding-bottom: 5px;">Expected: @Model.Engine.State.LastPlayedColor</div>
+                    <img style="padding-top: 10px;" src="@UnoCard.GetDefaultCardPicturePath((int)Model.Engine.State.LastPlayedColor)" alt="Expected color: @Model.Engine.State.LastPlayedColor"/>
+                </div>
+            }
+
+                <div align="center" style="padding-left: 50px; width: 210px" class="card">
+                    <div style="border-bottom: 2px solid black; padding-bottom: 5px;">Cards in deck: @Model.Engine.State.DeckOfCards.Count</div>
+                    <img style="padding-top: 10px;" src="@UnoCard.GetDefaultCardPicturePath()" alt="Default Uno Card"/>
+                </div>
+            </div>
+
+        </td>
+    <tr>
+</table>
+
+@if (Model.Engine.GameFinished())
+{
+    @* -----------------------------------  G  A  M  E    F  I  N  I  S  H  E  D  ---------------------------------- *@
+    <div class="action-division">
+        <h3>
+            @(Model.Engine.State.Winner!.Id == Model.PlayerId ? $"You won the game and got {Model.Engine.State.Winner.Points} points! Congratulations!" : $"{Model.Engine.State.Winner.NickName} has won the game with {Model.Engine.State.Winner.Points} points! Better luck next time!")
+        </h3>
+    </div>
+}
+else if (yourTurn)
+{
+    <form method="post" action="">
+    @if (Model.SelectCard != null)
+    {
+        @* ---------------------------------  S  E  L  E  C  T    C  O  L  O  U  R  -------------------------------- *@
+        <div class="hand-container action-division">
+            <div class="hand-title">
+                <h3>Choose the next color:</h3>
+                Select a color by clicking on it and <button class="action-button" type="submit" name="ActionButton" value="ChooseColor">Make your move with the color</button> or <button class="action-button" type="submit" name="ActionButton" value="Back">Go back to choosing card</button>
+            </div>
+            <div class="hand">
+            @for (var k = 0; k < (int)ECardSuit.Wild; k++)
+            {
+                <div class="card">
+                    <label for="color-@k">
+                        <input type="radio" name="SelectColor" value="@k" id="color-@k"/>
+                        <span class="card"><img src="@UnoCard.GetDefaultCardPicturePath(k)" id="color-pic-@k" alt="Choose the color @((ECardSuit)k)"/></span>
+                    </label>
+                </div>
+            }                    
+            </div>
+        </div>
+    } 
+    else if (Model.Engine.PlayerWillBeSkipped())
+    {
+        @* ---------------------------------  B  E  I  N  G    S  K  I  P  P  E  D  -------------------------------- *@
+        <div class="action-division">
+            <h3>
+                @($"Your turn is being skipped {(Model.Engine.PlayerGetsExtraCards() ? "and you get" + (Model.Engine.State.LastPlayedCard!.CardValue == ECardValue.ActionDrawTwo ? "+2 cards" : "+4 cards") : "")}")
+                <button style="visibility: hidden" type="submit" name="ActionButton" value="PlayerSkipped" id="AutomaticAction"></button>
+            </h3>
+        </div>
+    } 
+    else if (Model.Engine.IsAi(Model.Engine.GetPlayer(Model.PlayerId)))
+    {
+        @* ---------------------------------------  A  I  '  S    T  U  R  N  -------------------------------------- *@
+        <div class="action-division">
+            <h3>
+                @($"{Model.Engine.GetPlayer(Model.PlayerId).NickName} is choosing a card...")
+                <button style="visibility: hidden" type="submit" name="ActionButton" value="AIPlayCard" id="AutomaticAction"></button>
+            </h3>
+        </div>
+    }
+    else
+    {
+        @* ---------------------------------  S  E  L  E  C  T    A    C  A  R  D  --------------------------------- *@
+        <div class="hand-container action-division">
+            <div class="hand-title">
+                <h3>Your possible moves (@Model.Engine.PossibleMoves(Model.Engine.GetPlayer(Model.PlayerId)).Count):</h3>
+                @if (Model.Engine.PossibleMoves(Model.Engine.GetPlayer(Model.PlayerId)).Count != 0)
+                {
+                    <text>Select a card by clicking on it and <button class="action-button" type="submit" name="ActionButton" value="HumanPlayCard">Play your selected card</button></text>
+                    if ((Model.Engine.NewCardAllowed() && Model.NewCardTaken == false) || (Model.NewCardTaken || Model.Engine.State.DeckOfCards.Count == 0))
+                    {
+                        <text> or </text>
+                    }
+                }
+                @if (Model.Engine.NewCardAllowed() && Model.NewCardTaken == false)
+                {
+                    <text><button class="action-button" type="submit" name="ActionButton" value="NewCard">Take a new Card</button></text>
+                }
+                @if (Model.NewCardTaken || Model.Engine.State.DeckOfCards.Count == 0)
+                {
+                    <text><button class="action-button" type="submit" name="ActionButton" value="SkipTurn">Skip your turn</button></text>
+                }
+            </div>
+            
+            <div class="hand">
+            @for (var j = 0; j < Model.Engine.PossibleMoves(Model.Engine.GetPlayer(Model.PlayerId)).Count(); j++)
+            {
+                var card = Model.Engine.PossibleMoves(Model.Engine.GetPlayer(Model.PlayerId))[j];
+                <div class="card">
+                    <label for="card-@j">
+                        <input type="radio" name="SelectCard" value="@j" id="card-@j"/>
+                        <span class="card"><img src="@card.GetCardPicturePath()" alt="@card.ToString()" id="radio-@j"/></span>
+                    </label>
+                </div>
+            }
+            </div>
+        </div>
+    }
+    </form>
+}
+
+<div class="hand-container action-division">
+    <div class="hand-title">
+        <h3>Your hand (@Model.Engine.GetPlayer(Model.PlayerId).PlayerHand.Count @(Model.Engine.GetPlayer(Model.PlayerId).PlayerHand.Count == 1 ? "card" : "cards")):</h3>
+    </div>
+    <div class="hand">
+    @foreach (var card in Model.Engine.GetPlayer(Model.PlayerId).PlayerHand.Order())
+    {
+        <div class="card">
+            <img src="@card.GetCardPicturePath()" alt="@card.ToString()"/>
+        </div>
+    }
+    </div>
+</div>
+
+<input type="hidden" name="GameId" value="@Model.GameId"/>
+<input type="hidden" name="PlayerId" value="@Model.PlayerId"/>
+
+@section Scripts {
+@if (!yourTurn && Model.Engine.State.Winner == null)
+{
+    <script>
+        let timerValue = 3;
+        let timerLabel = document.querySelector("#reload-label");
+        setInterval(() => {
+            timerValue--;
+            timerLabel.innerHTML = timerValue.toString();
+            if (timerValue <= 0) {
+                window.location.reload();
+            }
+        }, 1000);
+    </script>
+} 
+else if (Model.Engine.PlayerWillBeSkipped() || Model.Engine.IsAi(Model.Engine.GetPlayer(Model.PlayerId)))
+{
+    <script>
+        let timerValue = 1;
+        setInterval(() => {
+            timerValue--;
+            if (timerValue <= 0) {
+                document.getElementById("AutomaticAction").click();
+            }
+        }, 1000);
+    </script>
+}
+}

@@ -1,0 +1,93 @@
+@page
+@model WebApp.Pages_Games.CreateModel
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+<h1>Create</h1>
+
+<h4>Game</h4>
+<hr/>
+
+<form id="create-game" method="post">
+   
+    <label for="player-amount">
+        <b>Nr of players for the game (2-10):</b>
+        <input type="number" min="2" max="10" step="1" required="required" id="player-amount" value="@Model.PlayerCount"/>
+    </label>
+    
+    <br/>&nbsp;
+    
+@if (Model.PlayerCount != null) {
+    <table class="table">
+        
+        <thead>
+            <tr>
+                <td colspan="2">
+                    <b>Choose the player type:</b>
+                </td>
+                <td>
+                    <b>Give your player a nickname:</b>
+                </td>
+                <td>
+                    <b>Choose who to play as:</b>
+                </td>
+            </tr>
+        </thead>
+
+        <tbody>
+        @for (var i = 0; i < Model.PlayerCount; i++)
+        {
+            <tr>
+            @{
+                var playerType = $"PlayerType{i}";
+                var playerName = $"PlayerName{i}";
+
+                <td>
+                    <label>
+                        <input type="radio" name="@playerType" value="AI" required="required"/> AI
+                    </label>
+                </td>
+                <td>
+                    <label>
+                        <input type="radio" name="@playerType" value="Human" required="required"/> Human
+                    </label>
+                </td>
+                <td>
+                    <input type="text" placeholder="player nickname" name="@playerName"/>
+                </td>
+                <td>
+                    <label>
+                        <input type="radio" name="PlayAs" value="@i"/> Play as ...
+                    </label>
+                </td>
+            }
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+    <div class="form-group">
+        <input type="submit" value="Create" class="btn btn-primary" />
+    </div>
+    
+</form>
+
+<div>
+    <a asp-page="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script>
+        document.getElementById('player-amount').addEventListener('change', function () {
+            let playerCount = this.value;
+            if (!(2 <= playerCount && playerCount <= 10)) {
+                return;
+            }
+            location.href = '?PlayerCount=' + playerCount;
+        });
+    </script>
+}

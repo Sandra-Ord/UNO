@@ -1,0 +1,16 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "UNO";
+}
+
+<div class="text-center">
+    <h1 class="display-4">- - U N O - -</h1>
+</div>
+<br>
+<br>
+<h2>
+    <div align="center">You can start <a asp-page="Games/Create">a new game</a></div><br>
+    <div align="center">or</div><br>
+    <div align="center">load up <a asp-page="Games/Index">an old game</a> <br>(currently there @(Model.Count == 1 ? "is 1 game)" : $"{Model.Count} games to choose from)")</div>
+</h2>
